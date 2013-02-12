@@ -20,26 +20,42 @@ class ParsedCVU(object):
         '''
         cvu = self.cvu_opener(cvu_html_string)
         
-        self._sections = self._get_sections(cvu)
         _sections = self._get_sections(cvu)
-        _data = _sections[1]
-        _subdata = self._get_sections(_data, False)
-        _main_data = _subdata[0]
-        _desempeno = _sections[2]
-        self.name = self._get_name(_sections[0])
-        self.bdate = self._get_birth_date(_data)
-        self.id = self._get_by_td(_data, 4)
-        self.bplace = self._get_by_td(_data, 10)
-        self.nationality = self._get_by_td(_data, 12)
-        self.gender = self._get_by_td(_data, 14)[0]
-        self.address = self._get_by_td(_subdata[2], 1)
-        self.ids = self._to_dict(_subdata[3], i = 1)
-        self.phn = self._to_dict(_subdata[7])
-        self.mail = self._to_dict(_subdata[5])
-        _dsmp = self._get_sections(_sections[2], False)
-        self.dsmp = self._to_dict(_dsmp[0])
+        _person = self._personal_data_parsed(_sections)
+        _secss = self._non_person_parser(_sections)
+        self.cvu = self._merge_data(_person, _secss)
 
         
+    def _merge_data(self, D1, D2):
+        d = D1.copy()
+        d.update(D2)
+        return d
+    
+    
+    def _personal_data_parsed(self, sections):
+        if sections == None: return None
+        data = sections[1]
+        subd = self._get_sections(data, False)
+        cvu_id = self._get_by_td(data, 4)
+        bplace = self._get_by_td(data, 10)
+        name = self._get_name(sections[0])
+        bdate = self._get_birth_date(data)
+        nationality = self._get_by_td(data, 12)
+        gender = self._get_by_td(data, 14)[0]
+        address = self._get_by_td(subd[2], 1)
+        ids = self._to_dict(subd[3], i = 1)
+        phn = self._to_dict(subd[7])
+        mail = self._to_dict(subd[5])
+        return {"DATOS PERSONALES": {"CVU id": cvu_id, 
+                                     "Lugar de nacimiento": bplace, 
+                                     "Nombre":name, 
+                                     "Fecha de nacimiento": bdate,
+                                     "Nacionalidad": nationality,
+                                     "Género": gender, "Dirección": address, 
+                                     "Identificaciones": ids, "Teléfonos": phn,
+                                     "Correos Electrónicos": mail}}
+    
+    
     def _to_dict(self, sub_sec, path = "./tbody", i = 0):
         if sub_sec == None: return None
         element = self._get_sections(sub_sec, 0)[0].xpath(path)[0]
@@ -100,46 +116,48 @@ class ParsedCVU(object):
             tds = sub_sec.xpath(td_css)
             return " ".join(tds[td].xpath("string()").replace("\n","").split())
         except:
-            return "Not found"             
+            return "Not found" 
+        
+        
+    def _non_person_parser(self, sub_secs):
+        if sub_secs == None: return None
+        
+        secsy = dict([(el[0].xpath("string()"), el[0].xpath("../../tr/td/table")) 
+                      for el in [title.xpath("./tbody/tr/th") 
+                                 for title in sub_secs[2:]]])
+        jason = {}
+            
+        for sec in secsy.items():
+            temp_dict = {}
+        
+            for el in sec[1]:
+                t = el.xpath("./tbody/tr/td")
+                subttle = t[0].xpath("./b")
+                cont = t[2].xpath("./table/tbody/tr")
+                k = subttle[0].xpath("string()").strip().rstrip().replace("\n", "")
+            
+                for trel in cont:
+                    tmp = []
+                    v = " ".join(trel.xpath("string()").split()).strip().rstrip()
+                    tmp.append(v)
+                    temp_dict[k] = temp_dict.get(k, []) + tmp 
+                      
+            jason[sec[0]] = temp_dict
+                    
+        return jason            
 
 
 octavio = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuOctavio.html")
-#ebe = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuEbe.html")
-#karen = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuKaren.html")
-active = octavio
+ebe = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuEbe.html")
+karen = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuKaren.html")
+hugo = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuHugo.html")
+blanca = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuBlanca.html")
 
+active = (octavio, ebe, karen, hugo, blanca)[3]
 
-print("CVU id: " + str(active.id))
-print("name: " + active.name)
-print("bday: " + active.bdate)
-print("nation: " + active.nationality)
-print("bplace: " + active.bplace)
-print("gender: " + active.gender)
-print("address: " + active.address)
-print("ids: " + str(active.ids))
-print("phone: " + str(active.phn))
-print("mail: " + str(active.mail))
-secsy = dict([(el[0].xpath("string()"), el[0].xpath("../../tr/td/table")) 
-              for el in [title.xpath("./tbody/tr/th") 
-                         for title in active._sections[2:]]])
-jason = {}
+print(active.cvu["DATOS PERSONALES"]["Fecha de nacimiento"])
+for (k,v) in active.cvu.items():
+    print(k)
+    for (a,b) in v.items():
+        print((a, b))
 
-
-for sec in secsy.items():
-    temp_dict = {}
-
-    for el in sec[1]:
-        t = el.xpath("./tbody/tr/td")
-        subttle = t[0].xpath("./b")
-        cont = t[2].xpath("./table/tbody/tr")
-        k = subttle[0].xpath("string()").strip().replace("\n", "")
-    
-        for trel in cont:
-            tmp = []
-            v = trel.xpath("string()").strip().replace("\n", "")
-            tmp.append(v)
-            temp_dict[k] = temp_dict.get(k, []) + tmp 
-              
-    jason[sec[0]] = temp_dict
-            
-print(jason)
