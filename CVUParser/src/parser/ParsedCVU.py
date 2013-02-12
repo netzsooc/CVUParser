@@ -104,9 +104,9 @@ class ParsedCVU(object):
 
 
 octavio = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuOctavio.html")
-ebe = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuEbe.html")
-karen = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuKaren.html")
-active = (octavio, ebe, karen)[0]
+#ebe = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuEbe.html")
+#karen = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuKaren.html")
+active = octavio
 
 
 print("CVU id: " + str(active.id))
@@ -119,12 +119,27 @@ print("address: " + active.address)
 print("ids: " + str(active.ids))
 print("phone: " + str(active.phn))
 print("mail: " + str(active.mail))
-secsy = dict([(el[0].xpath("string()"), el[0].xpath("../../tr/td/table")) for el in [title.xpath("./tbody/tr/th") for title in active._sections[2:]]])
-secsy1 = []
-for v in secsy.values():
-    for el in v:
-        secsy1.append(el)
-        
-print(secsy)
-print([[el.xpath("string()") for el in v] for v in secsy.values()])
-print()
+secsy = dict([(el[0].xpath("string()"), el[0].xpath("../../tr/td/table")) 
+              for el in [title.xpath("./tbody/tr/th") 
+                         for title in active._sections[2:]]])
+jason = {}
+
+
+for sec in secsy.items():
+    temp_dict = {}
+
+    for el in sec[1]:
+        t = el.xpath("./tbody/tr/td")
+        subttle = t[0].xpath("./b")
+        cont = t[2].xpath("./table/tbody/tr")
+        k = subttle[0].xpath("string()").strip().replace("\n", "")
+    
+        for trel in cont:
+            tmp = []
+            v = trel.xpath("string()").strip().replace("\n", "")
+            tmp.append(v)
+            temp_dict[k] = temp_dict.get(k, []) + tmp 
+              
+    jason[sec[0]] = temp_dict
+            
+print(jason)
