@@ -3,7 +3,7 @@ Created on 05/02/2013
 
 @author: netzsooc
 '''
-from lxml import html
+from lxml import html, etree
 from lxml.html.clean import Cleaner
 from cssselect import GenericTranslator
 
@@ -153,11 +153,31 @@ karen = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuKaren.html")
 hugo = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuHugo.html")
 blanca = ParsedCVU("/home/netzsooc/Documents/CVUs/cvuBlanca.html")
 
-active = (octavio, ebe, karen, hugo, blanca)[3]
+active = (octavio, ebe, karen, hugo, blanca)[0]
 
 print(active.cvu["DATOS PERSONALES"]["Fecha de nacimiento"])
-for (k,v) in active.cvu.items():
-    print(k)
-    for (a,b) in v.items():
-        print((a, b))
+#for (k,v) in active.cvu.items():
+#    print(k)
+#    for (a,b) in v.items():
+#        print((a, b))
 
+
+root = etree.Element("CVU")
+cvu_id = etree.SubElement(root, "CVU_ID")
+cvu_id.text = active.cvu["DATOS PERSONALES"]["CVU id"]
+
+for k in sorted(active.cvu):
+    tag = k
+    k = k.replace(" ", "_")
+    k = k.replace("Ñ", "N")
+    child = etree.SubElement(root, k)
+    for a in sorted(active.cvu[tag]):
+        a = a.replace(" ", "_").replace("/", "_")
+        child.append(etree.Element(a))
+    
+for k in sorted(active.cvu["DATOS PERSONALES"]):
+    k = k.replace(" ", "_")
+    k = k.replace("Ñ", "N")
+    root.append(etree.Element(k))
+    
+print(etree.tostring(root, pretty_print=True).decode("utf-8"))
